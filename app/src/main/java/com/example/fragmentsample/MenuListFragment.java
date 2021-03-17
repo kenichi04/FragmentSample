@@ -4,7 +4,10 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,6 +26,8 @@ public class MenuListFragment extends Fragment {
 
     /* このフラグメントが所属するアクティビティオブジェクト */
     private Activity _parentActivity;
+    /* 大画面かどうかの判定フラグ */
+    private boolean _isLayoutXLarge = true;
 
     public MenuListFragment() {
     }
@@ -81,27 +86,57 @@ public class MenuListFragment extends Fragment {
         return view;
     }
 
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
+
+        // 所属するアクティビティからmenuThanksFrame取得
+        View menuThanksFrame = _parentActivity.findViewById(R.id.menuThanksFrame);
+        if (menuThanksFrame == null) {
+            _isLayoutXLarge = false;
+        }
+    }
+
     private class ListItemClickListener implements AdapterView.OnItemClickListener {
         @Override
         public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
             //タップされた行のデータ取得。SimpleAdapterでは1行分はMap型。
             Map<String, String> item = (Map<String, String>) parent.getItemAtPosition(position);
-
             //nameキーとpriceキーに入っている値を取得
             String menuName = item.get("name");
             String menuPrice = item.get("price");
 
-            //インテントオブジェクトを作成
-            Intent intent = new Intent(_parentActivity, MenuThanksActivity.class);
+            //引継ぎデータを格納するBundleオブジェクト生成
+            Bundle bundle = new Bundle();
+            bundle.putString("menuName", menuName);
+            bundle.putString("menuPrice", menuPrice);
 
-            //次の画面に送るデータの格納。intentオブジェクトのメソッド。
-            intent.putExtra("menuName", menuName);
-            intent.putExtra("menuPrice", menuPrice);
+            if (_isLayoutXLarge) {
+                //フラグメントマネージャー取得
+                FragmentManager manager = getFragmentManager();
+                //フラグメントトランザクション開始
+                FragmentTransaction transaction = manager.beginTransaction();
+                MenuThanksFragment menuThanksFragment = new MenuThanksFragment();
+                //引継ぎデータをフラグメントに格納
+                menuThanksFragment.setArguments(bundle);
+                //フラグメントをmenuThanksFrameレイアウトに追加（置き換え）
+                transaction.replace(R.id.menuThanksFrame, menuThanksFragment);
+                //フラグメントトランザクションのコミット
+                transaction.commit();
 
-            //第二画面の起動
-            startActivity(intent);
+            } else {  // 通常画面
+                //インテントオブジェクトを作成
+                Intent intent = new Intent(_parentActivity, MenuThanksActivity.class);
+
+//                intent.putExtra("menuName", menuName);
+//                intent.putExtra("menuPrice", menuPrice);
+
+                //データをBundleオブジェクトとしてまとめて格納
+                intent.putExtras(bundle);
+                startActivity(intent);
+            }
         }
-
     }
+
 }
